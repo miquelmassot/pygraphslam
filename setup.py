@@ -20,11 +20,7 @@ setup(
     package_dir={"": "src"},  # Optional
     packages=find_packages(where="src"),  # Required
     python_requires=">=3.6, <4",
-    entry_points={  # Optional
-        "console_scripts": [
-            "pygraphslam=pygraphslam:main",
-        ],
-    },
+    entry_points={"console_scripts": ["pygraphslam=pygraphslam:main"]},  # Optional
     project_urls={  # Optional
         "Bug Reports": "https://github.com/miquelmassot/pybpslam/issues",
         "Funding": "https://github.com/sponsors/miquelmassot",

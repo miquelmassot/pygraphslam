@@ -1,23 +1,26 @@
 #!/usr/bin/env python
 
-import numpy as np
 import copy
+
 import g2o
-from .pose_graph_optimisation import PoseGraphOptimisation
-from .gui import GraphSlamGui
 import icp
+import numpy as np
 from scipy.spatial import cKDTree
+
+from .gui import GraphSlamGui
+from .pose_graph_optimisation import PoseGraphOptimisation
 
 
 class GraphSlam:
     __slots__ = [
-        'gui',
-        'pose',
-        'prev_odom',
-        'prev_laser',
-        'registered_lasers',
-        'draw_last',
-        'optimizer']
+        "gui",
+        "pose",
+        "prev_odom",
+        "prev_laser",
+        "registered_lasers",
+        "draw_last",
+        "optimizer",
+    ]
 
     def __init__(self, save_gif, draw_last):
         self.optimizer = PoseGraphOptimisation()
@@ -34,12 +37,12 @@ class GraphSlam:
 
     def run_icp(self, A, B, init_pose, max_iterations=80, tolerance=0.0001):
         tran, distances, iter, cov = None, None, None, None
-        with np.errstate(all='raise'):
+        with np.errstate(all="raise"):
             try:
                 tran, distances, iter, cov = icp.icp(
-                    B, A, init_pose,
-                    max_iterations=max_iterations, tolerance=tolerance)
-            except Exception as e:
+                    B, A, init_pose, max_iterations=max_iterations, tolerance=tolerance
+                )
+            except Exception:
                 pass
         return tran, distances, iter, cov
 
@@ -48,9 +51,9 @@ class GraphSlam:
         A = self.prev_laser
         B = laser
         x, y, yaw = dx[0], dx[1], dx[2]
-        init_pose = np.array([[np.cos(yaw), -np.sin(yaw), x],
-                              [np.sin(yaw), np.cos(yaw), y],
-                              [0, 0, 1]])
+        init_pose = np.array(
+            [[np.cos(yaw), -np.sin(yaw), x], [np.sin(yaw), np.cos(yaw), y], [0, 0, 1]]
+        )
 
         tran, distances, iter, cov = self.run_icp(A, B, init_pose)
 
@@ -66,9 +69,12 @@ class GraphSlam:
         self.optimizer.add_vertex(vertex_idx, g2o.SE2(g2o.Isometry2d(self.pose)))
         rk = g2o.RobustKernelDCS()
         information = np.linalg.inv(cov)
-        self.optimizer.add_edge([vertex_idx-1, vertex_idx],
-                           g2o.SE2(g2o.Isometry2d(tran)),
-                           information, robust_kernel=rk)
+        self.optimizer.add_edge(
+            [vertex_idx - 1, vertex_idx],
+            g2o.SE2(g2o.Isometry2d(tran)),
+            information,
+            robust_kernel=rk,
+        )
         self.registered_lasers.append(B)
 
     @property
@@ -76,23 +82,30 @@ class GraphSlam:
         return len(self.registered_lasers)
 
     def loop_closure(self):
-        poses = [self.optimizer.get_pose(idx).to_vector()[0:2]
-                for idx in range(self.vertex_idx-1)]
+        poses = [
+            self.optimizer.get_pose(idx).to_vector()[0:2]
+            for idx in range(self.vertex_idx - 1)
+        ]
         kd = cKDTree(poses)
         x, y, _ = self.optimizer.get_pose(self.vertex_idx).to_vector()
         idxs = kd.query_ball_point(np.array([x, y]), r=4.25)
-        for idx in idxs:
-            A = self.registered_lasers[idx]
-            tran, distances, iter, cov = self.run_icp(A, B, np.eye(3))
+        # For all but the last laser scan, find the best ICP pose
+        for idx in idxs[:-1]:
+            tran, distances, _, cov = self.run_icp(
+                self.registered_lasers[idx], self.registered_lasers[-1], np.eye(3)
+            )
             if tran is None:
                 print("ICP failed when trying to LC")
                 continue
             information = np.linalg.inv(cov)
             if np.mean(distances) < 0.15:
                 rk = g2o.RobustKernelDCS()
-                self.optimizer.add_edge([self.vertex_idx, idx],
-                                    g2o.SE2(g2o.Isometry2d(tran)),
-                                    information, robust_kernel=rk)
+                self.optimizer.add_edge(
+                    [self.vertex_idx, idx],
+                    g2o.SE2(g2o.Isometry2d(tran)),
+                    information,
+                    robust_kernel=rk,
+                )
 
         self.optimizer.optimize()
         self.pose = self.optimizer.get_pose(self.vertex_idx).to_isometry().matrix()
@@ -102,7 +115,7 @@ class GraphSlam:
         traj = []
         point_cloud = []
 
-        for idx in range(max(0, self.vertex_idx-self.draw_last), self.vertex_idx):
+        for idx in range(max(0, self.vertex_idx - self.draw_last), self.vertex_idx):
             x = self.optimizer.get_pose(idx)
             r = x.to_isometry().R
             t = x.to_isometry().t
@@ -113,8 +126,8 @@ class GraphSlam:
         point_cloud = np.vstack(point_cloud)
         traj = np.array(traj)
 
-        xyreso = 0.01 # Map resolution (m)
-        point_cloud = (point_cloud / xyreso).astype('int')
+        xyreso = 0.01  # Map resolution (m)
+        point_cloud = (point_cloud / xyreso).astype("int")
         point_cloud = np.unique(point_cloud, axis=0)
         point_cloud = point_cloud * xyreso
         self.gui.draw(traj, point_cloud)
@@ -130,7 +143,7 @@ class GraphSlam:
         self.prev_laser = copy.deepcopy(laser)
 
         if self.vertex_idx > 10 and not self.vertex_idx % 10:
-            self.loop_closure()
+            self.loop_closure(laser)
 
         self.draw()
 
