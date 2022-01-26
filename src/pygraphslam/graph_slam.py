@@ -3,11 +3,11 @@
 import copy
 
 import g2o
-import icp
 import numpy as np
 from scipy.spatial import cKDTree
 
 from .gui import GraphSlamGui
+from .icp import icp
 from .pose_graph_optimisation import PoseGraphOptimisation
 
 
@@ -20,6 +20,7 @@ class GraphSlam:
         "registered_lasers",
         "draw_last",
         "optimizer",
+        "iteration_count",
     ]
 
     def __init__(self, save_gif, draw_last):
@@ -31,6 +32,7 @@ class GraphSlam:
         self.prev_laser = None
         self.draw_last = draw_last
         self.gui = GraphSlamGui(save_gif)
+        self.iteration_count = 0
 
     def enough_distance_travelled(self, dx):
         return np.linalg.norm(dx[0:2]) > 0.4 or abs(dx[2]) > 0.2
@@ -39,7 +41,7 @@ class GraphSlam:
         tran, distances, iter, cov = None, None, None, None
         with np.errstate(all="raise"):
             try:
-                tran, distances, iter, cov = icp.icp(
+                tran, distances, iter, cov = icp(
                     B, A, init_pose, max_iterations=max_iterations, tolerance=tolerance
                 )
             except Exception:
@@ -133,17 +135,28 @@ class GraphSlam:
         self.gui.draw(traj, point_cloud)
 
     def iterate(self, odom, laser):
+        self.iteration_count += 1
+        print("Iteration:", self.iteration_count)
+        if self.prev_odom is None:
+            # First iteration
+            self.prev_odom = odom.copy()
+            self.registered_lasers.append(laser)
+            print("First iteration")
+            return
+
+        # Compute odometry
         dx = odom - self.prev_odom
 
         if not self.enough_distance_travelled(dx):
+            print("Not enough distance travelled")
             return
 
         self.scan_matching(dx, laser)
         self.prev_odom = copy.deepcopy(odom)
         self.prev_laser = copy.deepcopy(laser)
 
-        if self.vertex_idx > 10 and not self.vertex_idx % 10:
-            self.loop_closure(laser)
+        # if self.vertex_idx > 10 and not self.vertex_idx % 10:
+        #     self.loop_closure()
 
         self.draw()
 

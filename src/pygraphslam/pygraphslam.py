@@ -5,7 +5,8 @@ import argparse
 from pygraphslam.graph_slam import GraphSlam
 from pygraphslam.read_data import read_data
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser(description="Python Graph Slam")
     parser.add_argument("--input", type=str, help="Input CLF File.", required=True)
     parser.add_argument(
@@ -37,3 +38,7 @@ if __name__ == "__main__":
             registered_lasers.append(B)
             continue
     """
+
+
+if __name__ == "__main__":
+    main()

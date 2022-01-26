@@ -5,6 +5,9 @@ import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 
+# import matplotlib
+# matplotlib.use("AGG")
+
 
 class GraphSlamGui:
     def __init__(self, save_gif):
