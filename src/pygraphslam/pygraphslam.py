@@ -28,17 +28,6 @@ def main():
         if odom_idx == args.draw_last:
             break
 
-    """
-    for odom_idx, odom in enumerate(odoms):
-        # Initialize
-        if odom_idx == 0:
-            prev_odom = odom.copy()
-            prev_idx = 0
-            B = lasers[odom_idx]
-            registered_lasers.append(B)
-            continue
-    """
-
 
 if __name__ == "__main__":
     main()

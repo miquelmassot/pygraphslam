@@ -57,13 +57,9 @@ class GraphSlam:
             [[np.cos(yaw), -np.sin(yaw), x], [np.sin(yaw), np.cos(yaw), y], [0, 0, 1]]
         )
 
-        tran, distances, iter, cov = self.run_icp(A, B, init_pose)
+        tran, _, _, cov = self.run_icp(A, B, init_pose)
 
         if tran is None:
-            print("ICP failed")
-            return
-
-        if np.mean(distances) > 0.15:
             return
 
         self.pose = np.matmul(self.pose, tran)
@@ -89,7 +85,8 @@ class GraphSlam:
             for idx in range(self.vertex_idx - 1)
         ]
         kd = cKDTree(poses)
-        x, y, _ = self.optimizer.get_pose(self.vertex_idx).to_vector()
+
+        x, y, _ = self.optimizer.get_pose(self.vertex_idx - 2).to_vector()
         idxs = kd.query_ball_point(np.array([x, y]), r=4.25)
         # For all but the last laser scan, find the best ICP pose
         for idx in idxs[:-1]:
@@ -97,10 +94,10 @@ class GraphSlam:
                 self.registered_lasers[idx], self.registered_lasers[-1], np.eye(3)
             )
             if tran is None:
-                print("ICP failed when trying to LC")
+                # print("ICP failed when trying to LC")
                 continue
             information = np.linalg.inv(cov)
-            if np.mean(distances) < 0.15:
+            if np.mean(distances) < 0.2:
                 rk = g2o.RobustKernelDCS()
                 self.optimizer.add_edge(
                     [self.vertex_idx, idx],
@@ -110,7 +107,7 @@ class GraphSlam:
                 )
 
         self.optimizer.optimize()
-        self.pose = self.optimizer.get_pose(self.vertex_idx).to_isometry().matrix()
+        self.pose = self.optimizer.get_pose(self.vertex_idx - 2).to_isometry().matrix()
 
     def draw(self):
         # Draw trajectory and map
@@ -136,27 +133,26 @@ class GraphSlam:
 
     def iterate(self, odom, laser):
         self.iteration_count += 1
-        print("Iteration:", self.iteration_count)
+        # print("Iteration:", self.iteration_count)
         if self.prev_odom is None:
             # First iteration
             self.prev_odom = odom.copy()
             self.registered_lasers.append(laser)
-            print("First iteration")
             return
 
         # Compute odometry
         dx = odom - self.prev_odom
 
         if not self.enough_distance_travelled(dx):
-            print("Not enough distance travelled")
+            # print("Not enough distance travelled")
             return
 
         self.scan_matching(dx, laser)
         self.prev_odom = copy.deepcopy(odom)
         self.prev_laser = copy.deepcopy(laser)
 
-        # if self.vertex_idx > 10 and not self.vertex_idx % 10:
-        #     self.loop_closure()
+        if self.vertex_idx > 10 and not self.vertex_idx % 10:
+            self.loop_closure()
 
         self.draw()
 
