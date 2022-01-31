@@ -16,7 +16,7 @@ class GraphSlamGui:
             lambda event: [exit() if event.key == "escape" else None],
         )
         plt.gcf().gca().set_aspect("equal")
-        plt.gcf().canvas.set_window_title("float")
+        # plt.gcf().canvas.set_window_title("float")
         plt.gcf().tight_layout(pad=0)
 
         self.max_x = -float("inf")

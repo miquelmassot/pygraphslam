@@ -12,7 +12,7 @@ class PoseGraphOptimisation(g2o.SparseOptimizer):
         solver = g2o.OptimizationAlgorithmLevenberg(solver)
         super().set_algorithm(solver)
 
-    def optimize(self, max_iterations=20):
+    def optimize(self, max_iterations=50):
         """Optimize the pose graph."""
         super().initialize_optimization()
         super().optimize(max_iterations)
