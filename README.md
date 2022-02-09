@@ -20,3 +20,9 @@ optional arguments:
                         Number of point clouds to draw.
   --save_gif            Save a GIF animation
 ```
+
+## License
+Based on https://github.com/goktug97/PyGraphSLAM with MIT license.
+
+## Datasets
+http://ais.informatik.uni-freiburg.de/slamevaluation/datasets.php
