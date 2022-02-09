@@ -5,6 +5,8 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Say Thanks!](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/miquelmassot)
 
+A python implementation of SLAM using laser scan matching ICP frontend and a g2o backend using [g2opy](https://github.com/miquelmassot/g2opy).
+
 ![GIF](https://github.com/miquelmassot/pygraphslam/raw/main/data/pygraphslam.gif)
 
 ## Usage
